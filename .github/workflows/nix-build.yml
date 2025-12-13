@@ -13,6 +13,11 @@ on:
         required: false
         type: string
         default: "nix build"
+      bun-nix-output:
+        description: "Output file for bun2nix"
+        required: false
+        type: string
+        default: "bun.nix"
       working-directory:
         description: "Working directory for commands"
         required: false
@@ -38,12 +43,12 @@ jobs:
       - name: Check bun.nix is up to date
         if: ${{ inputs.check-bun-nix-sync }}
         run: |
-          original_hash=$(sha256sum bun.nix | cut -d' ' -f1)
-          nix develop --command bun2nix
-          new_hash=$(sha256sum bun.nix | cut -d' ' -f1)
+          original_hash=$(sha256sum ${{ inputs.bun-nix-output }} | cut -d' ' -f1)
+          nix develop --command bun2nix -o ${{ inputs.bun-nix-output }}
+          new_hash=$(sha256sum ${{ inputs.bun-nix-output }} | cut -d' ' -f1)
 
           if [ "$original_hash" != "$new_hash" ]; then
-            echo "::error::bun.nix is out of sync with bun.lock. Run 'bun2nix' to update."
+            echo "::error::${{ inputs.bun-nix-output }} is out of sync with bun.lock. Run 'bun2nix -o ${{ inputs.bun-nix-output }}' to update."
             exit 1
           fi
 
