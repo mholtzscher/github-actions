@@ -75,7 +75,7 @@ jobs:
 
       - name: Update bun.nix
         if: ${{ inputs.update-bun-nix }}
-        run: nix develop --command bun2nix
+        run: nix run github:nix-community/bun2nix
 
       - name: Check for changes
         id: changes
