@@ -1,4 +1,4 @@
-name: Update Bun Dependencies
+name: Update Dependencies
 
 on:
   workflow_call:
@@ -8,8 +8,18 @@ on:
         required: false
         type: string
         default: "latest"
+      update-nix-flake:
+        description: "Update nix flake inputs"
+        required: false
+        type: boolean
+        default: true
+      update-bun:
+        description: "Update bun dependencies"
+        required: false
+        type: boolean
+        default: true
       update-bun-nix:
-        description: "Also update bun.nix file"
+        description: "Update bun.nix file (requires update-bun)"
         required: false
         type: boolean
         default: true
@@ -17,25 +27,27 @@ on:
         description: "Branch name for the PR"
         required: false
         type: string
-        default: "deps/bun-update"
+        default: "deps/update"
       commit-message:
         description: "Commit message"
         required: false
         type: string
-        default: "chore: update bun dependencies"
+        default: "chore: update dependencies"
       pr-title:
         description: "Pull request title"
         required: false
         type: string
-        default: "chore: update bun dependencies"
+        default: "chore: update dependencies"
       pr-body:
         description: "Pull request body"
         required: false
         type: string
         default: |
-          Automated bun dependency updates.
+          Automated dependency updates.
 
-          Updates `bun.lock` and `bun.nix`.
+          This PR may include:
+          - Nix flake input updates (`flake.lock`)
+          - Bun dependency updates (`bun.lock`, `bun.nix`)
 
           This PR was created by the daily dependency update workflow.
       working-directory:
@@ -53,8 +65,8 @@ permissions:
   pull-requests: write
 
 jobs:
-  update-bun:
-    name: Update Bun Dependencies
+  update-deps:
+    name: Update Dependencies
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -62,30 +74,36 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install Nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Setup Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
       - uses: oven-sh/setup-bun@v2
+        if: ${{ inputs.update-bun }}
         with:
           bun-version: ${{ inputs.bun-version }}
 
-      - name: Install Nix
-        if: ${{ inputs.update-bun-nix }}
-        uses: DeterminateSystems/nix-installer-action@main
+      # Step 1: Update nix flake inputs (may update bun2nix version)
+      - name: Update nix flake inputs
+        if: ${{ inputs.update-nix-flake }}
+        run: nix flake update
 
+      # Step 2: Update bun dependencies
       - name: Update bun dependencies
+        if: ${{ inputs.update-bun }}
         run: bun update
 
+      # Step 3: Update bun.nix using the (potentially updated) bun2nix from flake
       - name: Update bun.nix
-        if: ${{ inputs.update-bun-nix }}
-        run: nix run github:nix-community/bun2nix
+        if: ${{ inputs.update-bun && inputs.update-bun-nix }}
+        run: nix run .#bun2nix
 
       - name: Check for changes
         id: changes
         run: |
-          if ${{ inputs.update-bun-nix }}; then
-            files="bun.lock bun.nix"
-          else
-            files="bun.lock"
-          fi
-          if git diff --quiet $files; then
+          if git diff --quiet; then
             echo "changed=false" >> $GITHUB_OUTPUT
           else
             echo "changed=true" >> $GITHUB_OUTPUT
