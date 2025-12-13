@@ -3,21 +3,11 @@ name: Nix Build
 on:
   workflow_call:
     inputs:
-      check-bun-nix-sync:
-        description: "Check if bun.nix is in sync with bun.lock"
-        required: false
-        type: boolean
-        default: true
       build-command:
         description: "Nix build command"
         required: false
         type: string
         default: "nix build"
-      bun-nix-output:
-        description: "Output file for bun2nix"
-        required: false
-        type: string
-        default: "bun.nix"
       working-directory:
         description: "Working directory for commands"
         required: false
@@ -39,18 +29,6 @@ jobs:
         uses: cachix/install-nix-action@v31
         with:
           nix_path: nixpkgs=channel:nixos-unstable
-
-      # - name: check bun.nix is up to date
-      #   if: ${{ inputs.check-bun-nix-sync }}
-      #   run: |
-      #     original_hash=$(sha256sum ${{ inputs.bun-nix-output }} | cut -d' ' -f1)
-      #     nix develop --command bun2nix -o ${{ inputs.bun-nix-output }}
-      #     new_hash=$(sha256sum ${{ inputs.bun-nix-output }} | cut -d' ' -f1)
-
-      #     if [ "$original_hash" != "$new_hash" ]; then
-      #       echo "::error::${{ inputs.bun-nix-output }} is out of sync with bun.lock. run 'bun2nix -o ${{ inputs.bun-nix-output }}' to update."
-      #       exit 1
-      #     fi
 
       - name: Build with Nix
         run: ${{ inputs.build-command }}
