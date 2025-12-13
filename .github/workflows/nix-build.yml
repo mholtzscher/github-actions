@@ -8,11 +8,6 @@ on:
         required: false
         type: boolean
         default: true
-      nix-path:
-        description: "Nix path to use"
-        required: false
-        type: string
-        default: "nixpkgs=channel:nixos-unstable"
       build-command:
         description: "Nix build command"
         required: false
@@ -26,6 +21,7 @@ on:
 
 jobs:
   nix-build:
+    name: Nix Build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -35,20 +31,16 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install Nix
-        uses: cachix/install-nix-action@v31
-        with:
-          nix_path: ${{ inputs.nix-path }}
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Setup Magic Nix Cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
 
       - name: Check bun.nix is up to date
         if: ${{ inputs.check-bun-nix-sync }}
         run: |
-          # Store original hash
           original_hash=$(sha256sum bun.nix | cut -d' ' -f1)
-
-          # Regenerate bun.nix
           nix develop --command bun2nix
-
-          # Check if it changed
           new_hash=$(sha256sum bun.nix | cut -d' ' -f1)
 
           if [ "$original_hash" != "$new_hash" ]; then
