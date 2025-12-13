@@ -95,10 +95,10 @@ jobs:
         if: ${{ inputs.update-bun }}
         run: bun update
 
-      # Step 3: Update bun.nix using the (potentially updated) bun2nix from flake
+      # Step 3: Update bun.nix using bun2nix version pinned in flake.lock
       - name: Update bun.nix
         if: ${{ inputs.update-bun && inputs.update-bun-nix }}
-        run: nix run .#bun2nix
+        run: nix run --inputs-from . bun2nix
 
       - name: Check for changes
         id: changes
