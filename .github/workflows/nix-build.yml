@@ -1,0 +1,60 @@
+name: Nix Build
+
+on:
+  workflow_call:
+    inputs:
+      check-bun-nix-sync:
+        description: "Check if bun.nix is in sync with bun.lock"
+        required: false
+        type: boolean
+        default: true
+      nix-path:
+        description: "Nix path to use"
+        required: false
+        type: string
+        default: "nixpkgs=channel:nixos-unstable"
+      build-command:
+        description: "Nix build command"
+        required: false
+        type: string
+        default: "nix build"
+      working-directory:
+        description: "Working directory for commands"
+        required: false
+        type: string
+        default: "."
+
+jobs:
+  nix-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@v31
+        with:
+          nix_path: ${{ inputs.nix-path }}
+
+      - name: Check bun.nix is up to date
+        if: ${{ inputs.check-bun-nix-sync }}
+        run: |
+          # Store original hash
+          original_hash=$(sha256sum bun.nix | cut -d' ' -f1)
+
+          # Regenerate bun.nix
+          nix develop --command bun2nix
+
+          # Check if it changed
+          new_hash=$(sha256sum bun.nix | cut -d' ' -f1)
+
+          if [ "$original_hash" != "$new_hash" ]; then
+            echo "::error::bun.nix is out of sync with bun.lock. Run 'bun2nix' to update."
+            exit 1
+          fi
+
+      - name: Build with Nix
+        run: ${{ inputs.build-command }}

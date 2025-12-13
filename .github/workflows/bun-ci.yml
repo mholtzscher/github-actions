@@ -1,0 +1,144 @@
+name: Bun CI
+
+on:
+  workflow_call:
+    inputs:
+      bun-version:
+        description: "Bun version to use"
+        required: false
+        type: string
+        default: "latest"
+      node-version:
+        description: "Node version for compatibility (if needed)"
+        required: false
+        type: string
+        default: ""
+      run-lint:
+        description: "Run linting"
+        required: false
+        type: boolean
+        default: true
+      run-typecheck:
+        description: "Run type checking"
+        required: false
+        type: boolean
+        default: true
+      run-build:
+        description: "Run build"
+        required: false
+        type: boolean
+        default: true
+      run-test:
+        description: "Run tests"
+        required: false
+        type: boolean
+        default: false
+      lint-command:
+        description: "Command to run for linting"
+        required: false
+        type: string
+        default: "bun run lint"
+      typecheck-command:
+        description: "Command to run for type checking"
+        required: false
+        type: string
+        default: "bun run tsc --noEmit"
+      build-command:
+        description: "Command to run for building"
+        required: false
+        type: string
+        default: "bun run build"
+      test-command:
+        description: "Command to run for testing"
+        required: false
+        type: string
+        default: "bun test"
+      working-directory:
+        description: "Working directory for commands"
+        required: false
+        type: string
+        default: "."
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    if: ${{ inputs.run-lint }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.bun-version }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: ${{ inputs.lint-command }}
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    if: ${{ inputs.run-typecheck }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.bun-version }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: ${{ inputs.typecheck-command }}
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    if: ${{ inputs.run-build }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.bun-version }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        run: ${{ inputs.build-command }}
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    if: ${{ inputs.run-test }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.bun-version }}
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Test
+        run: ${{ inputs.test-command }}

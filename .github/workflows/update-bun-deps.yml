@@ -1,0 +1,102 @@
+name: Update Bun Dependencies
+
+on:
+  workflow_call:
+    inputs:
+      bun-version:
+        description: "Bun version to use"
+        required: false
+        type: string
+        default: "latest"
+      update-bun-nix:
+        description: "Also update bun.nix file"
+        required: false
+        type: boolean
+        default: true
+      branch-name:
+        description: "Branch name for the PR"
+        required: false
+        type: string
+        default: "deps/bun-update"
+      commit-message:
+        description: "Commit message"
+        required: false
+        type: string
+        default: "chore: update bun dependencies"
+      pr-title:
+        description: "Pull request title"
+        required: false
+        type: string
+        default: "chore: update bun dependencies"
+      pr-body:
+        description: "Pull request body"
+        required: false
+        type: string
+        default: |
+          Automated bun dependency updates.
+
+          Updates `bun.lock` and `bun.nix`.
+
+          This PR was created by the daily dependency update workflow.
+      working-directory:
+        description: "Working directory for commands"
+        required: false
+        type: string
+        default: "."
+    secrets:
+      token:
+        description: "GitHub token (PAT recommended to trigger CI on created PRs)"
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-bun:
+    name: Update Bun Dependencies
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ inputs.bun-version }}
+
+      - uses: cachix/install-nix-action@v31
+        if: ${{ inputs.update-bun-nix }}
+
+      - name: Update bun dependencies
+        run: bun update
+
+      - name: Update bun.nix
+        if: ${{ inputs.update-bun-nix }}
+        run: bunx bun2nix -o bun.nix
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if ${{ inputs.update-bun-nix }}; then
+            files="bun.lock bun.nix"
+          else
+            files="bun.lock"
+          fi
+          if git diff --quiet $files; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.token }}
+          commit-message: ${{ inputs.commit-message }}
+          title: ${{ inputs.pr-title }}
+          body: ${{ inputs.pr-body }}
+          branch: ${{ inputs.branch-name }}
+          delete-branch: true

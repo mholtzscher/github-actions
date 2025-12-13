@@ -1,0 +1,76 @@
+name: Update Nix Flake Inputs
+
+on:
+  workflow_call:
+    inputs:
+      branch-name:
+        description: "Branch name for the PR"
+        required: false
+        type: string
+        default: "deps/nix-flake-update"
+      commit-message:
+        description: "Commit message"
+        required: false
+        type: string
+        default: "chore: update nix flake inputs"
+      pr-title:
+        description: "Pull request title"
+        required: false
+        type: string
+        default: "chore: update nix flake inputs"
+      pr-body:
+        description: "Pull request body"
+        required: false
+        type: string
+        default: |
+          Automated nix flake input updates.
+
+          This PR was created by the daily dependency update workflow.
+      working-directory:
+        description: "Working directory for commands"
+        required: false
+        type: string
+        default: "."
+    secrets:
+      token:
+        description: "GitHub token (PAT recommended to trigger CI on created PRs)"
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-nix:
+    name: Update Nix Flake Inputs
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working-directory }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Update flake inputs
+        run: nix flake update
+
+      - name: Check for changes
+        id: changes
+        run: |
+          if git diff --quiet flake.lock; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Pull Request
+        if: steps.changes.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v7
+        with:
+          token: ${{ secrets.token }}
+          commit-message: ${{ inputs.commit-message }}
+          title: ${{ inputs.pr-title }}
+          body: ${{ inputs.pr-body }}
+          branch: ${{ inputs.branch-name }}
+          delete-branch: true
