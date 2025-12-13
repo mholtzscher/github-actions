@@ -66,15 +66,16 @@ jobs:
         with:
           bun-version: ${{ inputs.bun-version }}
 
-      - uses: cachix/install-nix-action@v31
+      - name: Install Nix
         if: ${{ inputs.update-bun-nix }}
+        uses: DeterminateSystems/nix-installer-action@main
 
       - name: Update bun dependencies
         run: bun update
 
       - name: Update bun.nix
         if: ${{ inputs.update-bun-nix }}
-        run: bunx bun2nix -o bun.nix
+        run: nix develop --command bun2nix
 
       - name: Check for changes
         id: changes
