@@ -48,5 +48,7 @@ jobs:
         run: ${{ inputs.build-command }}
 
       - name: Push to Cachix
-        if: ${{ secrets.cachix-auth-token != '' }}
+        env:
+          CACHIX_AUTH_TOKEN: ${{ secrets.cachix-auth-token }}
+        if: env.CACHIX_AUTH_TOKEN != ''
         run: cachix push ${{ inputs.cachix-name }} ./result
