@@ -46,3 +46,7 @@ jobs:
 
       - name: Build with Nix
         run: ${{ inputs.build-command }}
+
+      - name: Push to Cachix
+        if: ${{ secrets.cachix-auth-token != '' }}
+        run: cachix push ${{ inputs.cachix-name }} ./result
